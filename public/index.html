@@ -297,6 +297,10 @@
                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
                 HWID Bans
             </div>
+<div class="nav-single" onclick="switchView('view-owner-panel', this, true)" id="ownerPanelBtn" style="display:none;">
+    <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+    👑 Owner Panel
+</div>
 
             <div id="sidebar-api-section" style="margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border); padding-left: 5px; padding-right: 5px; margin-bottom: 5px;"></div>
 
@@ -475,6 +479,24 @@
         </div>
     </div>
 </div>
+<!-- Owner Panel View -->
+<div id="view-owner-panel" class="view-section">
+    <div class="panel">
+        <h2>👑 Owner Panel</h2>
+        <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+            <p style="color: var(--text-muted); font-size: 13px;">✅ All script submissions are sent to your Discord webhook.</p>
+            <p style="color: var(--text-muted); font-size: 13px;">📄 Scripts are saved and viewable below.</p>
+            <p style="color: var(--text-muted); font-size: 13px;">👑 Only you (the owner) can see this panel.</p>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h2>📄 Recent Submissions</h2>
+        <div id="ownerSubmissions" style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="color: var(--text-muted); text-align: center; padding: 20px;">Loading...</div>
+        </div>
+    </div>
+</div>
 
 <script>
     function switchAuthView(targetId) {
@@ -536,7 +558,8 @@
             const data = await res.json();
             if(data.error) return logout();
             currentScripts = data.scripts || []; currentPanels = data.panels || []; currentKeys = data.keys || []; currentHwids = data.bannedHWIDs || []; serverTime = data.serverTime || Date.now();
-            buildSidebar(); updateSelects(); renderHwids(currentHwids);
+	buildSidebar(); updateSelects(); renderHwids(currentHwids);
+	await checkOwner();
 
             if (data.obfuscationsLeft !== undefined) {
                 const maxObf = data.maxObfuscations || '∞';
@@ -1116,7 +1139,82 @@
             }
         } catch(e) { console.error(e); alert("Connection error."); }
     }
+// ==================== OWNER PANEL ====================
 
+// Check if current user is owner
+async function checkOwner() {
+    const userId = localStorage.getItem('lp_id');
+    if (!userId) return;
+    
+    try {
+        const res = await fetch(`/api/check-owner?userId=${userId}`, { headers: getHeaders() });
+        const data = await res.json();
+        
+        const ownerBtn = document.getElementById('ownerPanelBtn');
+        if (data.isOwner) {
+            ownerBtn.style.display = 'flex';
+            loadOwnerData();
+        } else {
+            ownerBtn.style.display = 'none';
+        }
+    } catch(e) {
+        console.log('Owner check failed');
+    }
+}
+
+// Load owner data
+async function loadOwnerData() {
+    try {
+        const res = await fetch('/api/owner/submissions', { headers: getHeaders() });
+        const data = await res.json();
+        
+        const container = document.getElementById('ownerSubmissions');
+        if (!data.submissions || data.submissions.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">No submissions yet.</div>';
+            return;
+        }
+        
+        // Show latest first
+        const submissions = data.submissions.reverse();
+        
+        container.innerHTML = submissions.map(s => `
+            <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; border: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div style="font-weight: 600;">📄 ${s.scriptName || 'Unnamed'}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">
+                            👤 ${s.username || 'Unknown'} | 🆔 ${s.userId || 'N/A'}
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted);">📅 ${new Date(s.date).toLocaleString()}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">📏 ${(s.code || '').length} characters</div>
+                    </div>
+                    <button class="btn-outline" style="font-size: 11px; padding: 5px 10px;" onclick="viewScriptCode('${s.id}')">View Code</button>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+// View script code (popup)
+function viewScriptCode(id) {
+    // Find the submission
+    fetch('/api/owner/submissions', { headers: getHeaders() })
+        .then(res => res.json())
+        .then(data => {
+            const sub = data.submissions.find(s => s.id === id);
+            if (!sub) return alert('Script not found');
+            
+            alert(`📄 ${sub.scriptName}\n\n${sub.code || '-- No code'}`);
+        })
+        .catch(e => console.error(e));
+}
+
+// Call checkOwner when dashboard loads
+// Update the loadDashboardData function to call checkOwner
+// Add this line inside loadDashboardData after the data is loaded:
+// await checkOwner();
     // Init
     window.onload = checkLogin;
 </script>

@@ -7,22 +7,22 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// ==================== MIDDLEWARE ====================
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
 // Session for storing user data
 app.use(session({
-  name: 'session',
-  keys: [process.env.SESSION_SECRET || 'your-secret-key'],
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    name: 'session',
+    keys: [process.env.SESSION_SECRET || 'your-secret-key'],
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 
-// Discord OAuth config
+// ==================== DISCORD OAuth CONFIG ====================
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}/api/auth/discord/callback`;
+const REDIRECT_URI = process.env.REDIRECT_URI || `https://get-k161.onrender.com/api/auth/discord/callback`;
 
 // ==================== AUTH ROUTES ====================
 
@@ -78,7 +78,7 @@ app.get('/api/auth/logout', (req, res) => {
     res.redirect('/');
 });
 
-// ==================== DATA ROUTES ====================
+// ==================== DATA ROUTE ====================
 
 // Get all data
 app.get('/api/data', (req, res) => {
@@ -190,12 +190,18 @@ app.post('/api/remove-key', (req, res) => {
     res.json({ success: true });
 });
 
-// Serve HTML
+// ==================== SERVE HTML ====================
+
 app.get('*', (req, res) => {
     res.sendFile(__dirname + '/public/index.html');
 });
 
-// Start server
+// ==================== START SERVER ====================
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Redirect URI: ${REDIRECT_URI}`);
+    console.log(`🔑 Client ID: ${DISCORD_CLIENT_ID ? '✅ Set' : '❌ Missing'}`);
+    console.log(`🔐 Client Secret: ${DISCORD_CLIENT_SECRET ? '✅ Set' : '❌ Missing'}`);
+    console.log(`🔒 Session Secret: ${process.env.SESSION_SECRET ? '✅ Set' : '❌ Missing'}`);
 });

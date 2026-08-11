@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luau Security | Secure Dashboard</title>
+    <meta property="og:site_name" content="LuauProtect" />
+    <meta property="og:title" content="LuauProtect - Custom Obfuscator" />
+    <meta property="og:description" content="Luau Protect protects your code against reverse engineering" />
+    <meta property="og:url" content="https://luauprotect.up.railway.app/" />
+    <meta property="og:image" content="https://luauprotect.up.railway.app/photo.png" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="twitter:card" content="summary" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&family=JetBrains+Mono:wght@400;700&family=Fira+Code:wght@400;500&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
+        :root {
+            --bg-color: #09090b; --card-bg: rgba(18, 18, 20, 0.65); --primary: #6366f1; --primary-hover: #4f46e5;
+            --discord: #5865F2; --discord-hover: #4752C4; --danger: #ef4444; --danger-hover: #dc2626;
+            --warning: #f59e0b; --warning-hover: #d97706; --success: #10b981; --text-main: #f8fafc;
+            --text-muted: #9ca3af; --border: rgba(255, 255, 255, 0.08); --glow: rgba(99, 102, 241, 0.15);
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; min-height: 100vh; -webkit-font-smoothing: antialiased; overflow: hidden; }
+        #auth-wrapper { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; overflow-y: auto; padding: 20px 0; }
+        .code-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start; z-index: 1; pointer-events: none; overflow: hidden; opacity: 0.45; }
+        .code-column { font-family: 'Fira Code', monospace; font-size: 14px; line-height: 1.8; white-space: pre; text-align: left; animation: scrollCode 60s linear infinite; }
+        .kw { color: #ff7b72; font-weight: 500; } .fn { color: #d2a8ff; } .st { color: #a5d6ff; } .cm { color: #8b949e; font-style: italic; } .op { color: #79c0ff; } .vr { color: #c9d1d9; }
+        @keyframes scrollCode { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
+        .vignette { position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 0%, rgba(9,9,11,0.85) 75%, #09090b 100%); z-index: 2; pointer-events: none; }
+        .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border); box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.05); z-index: 10; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        #dashboard-content { display: none; width: 100%; height: 100vh; flex-direction: row; position: relative; }
+        .sidebar-overlay { display: none; }
+        .sidebar { width: 280px; background: var(--card-bg); backdrop-filter: blur(16px); border-right: 1px solid var(--border); padding: 30px 20px; display: flex; flex-direction: column; flex-shrink: 0; height: 100vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+        .sidebar::-webkit-scrollbar { width: 4px; } .sidebar::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 6px; }
+        .brand { font-size: 20px; font-weight: 800; color: white; display: flex; align-items: center; gap: 8px; margin-bottom: 35px; letter-spacing: -0.5px; padding-left: 5px; }
+        .brand span { color: var(--primary); } .brand-icon { width: 22px; height: 22px; color: var(--primary); }
+        .nav-items-container { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; }
+        .nav-accordion { color: var(--text-muted); padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; justify-content: space-between; user-select: none; font-size: 14px; }
+        .nav-accordion:hover, .nav-accordion.active { background-color: rgba(255,255,255,0.03); color: white; }
+        .nav-accordion-content { display: flex; align-items: center; gap: 10px; }
+        .nav-accordion .arrow { transition: transform 0.2s ease; font-size: 10px; }
+        .nav-accordion.open .arrow { transform: rotate(180deg); } .nav-accordion.open { color: var(--primary); }
+        .nav-dropdown { display: none; flex-direction: column; padding-left: 14px; margin-top: 4px; margin-bottom: 8px; gap: 4px; } .nav-dropdown.open { display: flex; }
+        .nav-sub-item { color: var(--text-muted); padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; border-left: 2px solid transparent; }
+        .nav-sub-item:hover { color: white; background-color: rgba(255,255,255,0.04); }
+        .nav-sub-item.active { background-color: var(--glow); color: var(--primary); border-left: 2px solid var(--primary); }
+        .nav-sub-item.action-add { color: var(--text-main); font-weight: 600; border-left: none; }
+        .nav-sub-item.action-add svg { color: var(--success); }
+        .nav-single { color: var(--text-muted); padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; gap: 10px; margin-top: 5px; font-size: 14px; }
+        .nav-single:hover, .nav-single.active { background-color: var(--glow); color: var(--primary); }
+        .main-content-wrapper { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background-color: var(--bg-color); }
+        .top-navbar { display: flex; justify-content: flex-end; align-items: center; padding: 15px 30px; background: var(--card-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); gap: 20px; z-index: 90; }
+        .mobile-brand-menu { display: none; }
+        .top-right-actions { display: flex; align-items: center; gap: 20px; }
+        .btn-invite { background-color: var(--discord); color: white; text-decoration: none; padding: 9px 15px; border-radius: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(88, 101, 242, 0.4); transition: all 0.2s ease; font-size: 13px; }
+        .btn-invite:hover { background-color: var(--discord-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(88, 101, 242, 0.6); }
+        .user-profile-top { display: flex; align-items: center; gap: 12px; }
+        .user-info-top { display: flex; flex-direction: column; align-items: flex-end; }
+        .user-name { font-weight: 600; font-size: 13px; color: white; margin-bottom: 2px; }
+        .user-id-logout { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+        .user-id { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .logout-link { color: var(--danger); cursor: pointer; font-weight: 600; text-decoration: none; transition: color 0.2s; }
+        .logout-link:hover { color: var(--danger-hover); }
+        .user-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); background-color: var(--bg-color); transition: border-color 0.2s ease; }
+        .user-profile-top:hover .user-avatar { border-color: var(--primary); }
+        .content-scroll { flex: 1; overflow-y: auto; padding: 30px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+        .content-scroll::-webkit-scrollbar { width: 6px; } .content-scroll::-webkit-scrollbar-thumb { background-color: #3f3f46; border-radius: 8px; }
+        .content-container { max-width: 1100px; margin: 0 auto; }
+        h2 { font-size: 20px; margin-top: 0; margin-bottom: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        .panel, .script-card { background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 14px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
+        input[type="text"], input[type="number"] { width: 100%; background-color: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-main); padding: 14px 16px; border-radius: 10px; margin-bottom: 15px; font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 500; transition: all 0.2s ease; }
+        select { width: 100%; background-color: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-main); border-radius: 10px; margin-bottom: 25px; font-family: 'Inter', sans-serif; font-weight: 500; transition: all 0.2s ease; font-size: 14px !important; -webkit-appearance: none; -moz-appearance: none; appearance: none; padding: 14px 16px; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 16px top 50%; background-size: 12px auto; }
+        select option { font-size: 14px !important; background-color: var(--bg-color); color: var(--text-main); }
+        textarea { width: 100%; background-color: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-main); border-radius: 10px; margin-bottom: 15px; transition: all 0.2s ease; font-family: 'JetBrains Mono', monospace !important; font-size: 13px; padding: 18px 20px !important; line-height: 1.6; resize: vertical; }
+        .loader-input { font-family: 'JetBrains Mono', monospace !important; font-size: 13px; padding: 12px 14px; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--glow); }
+        .checkbox-container { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer; user-select: none; padding: 10px 14px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; transition: all 0.2s; width: fit-content; }
+        .checkbox-container:hover { background: rgba(0,0,0,0.4); border-color: var(--warning); color: var(--warning); }
+        .checkbox-container input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--warning); }
+        button { border: none; padding: 11px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4); }
+        .btn-danger { background-color: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .btn-danger:hover { background-color: rgba(239, 68, 68, 0.2); }
+        .btn-success { background-color: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .btn-success:hover { background-color: rgba(16, 185, 129, 0.2); }
+        .btn-warning { background-color: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.2); }
+        .btn-warning:hover { background-color: rgba(245, 158, 11, 0.2); }
+        .btn-outline { background-color: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); background-color: rgba(99, 102, 241, 0.1); }
+        .scripts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+        .script-card { padding: 20px; display: flex; flex-direction: column; transition: all 0.3s ease; position: relative; }
+        .script-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.15); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 10px; }
+        .card-title { font-size: 15px; font-weight: 600; margin: 0; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .loader-input { background-color: rgba(0,0,0,0.4) !important; border: 1px dashed var(--border) !important; cursor: copy; margin-bottom: 20px; color: var(--primary) !important; font-weight: 600; text-align: center; font-size: 12px; }
+        .actions { display: flex; gap: 10px; margin-top: auto; flex-wrap: wrap; }
+        .actions button { flex: 1; padding: 9px; font-size: 12px; }
+        .view-section { display: none; } .view-section.active { display: block; animation: fadeIn 0.3s ease; }
+        .view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .view-title { font-size: 20px; font-weight: 800; margin: 0; color: white; display: flex; align-items: center; gap: 10px; }
+        .view-subtitle { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-weight: normal;}
+        .detail-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: var(--text-muted); font-size: 12px; font-weight: 600; }
+        .detail-value { font-size: 13px; font-weight: 500; color: white; text-align: right; word-break: break-all; }
+        .status-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;}
+        .icon-sm { width: 16px; height: 16px; min-width: 16px; } .icon-md { width: 18px; height: 18px; min-width: 18px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 768px) {
+            body { overflow-y: auto; overflow-x: hidden; }
+            #auth-wrapper { padding: 20px 15px; justify-content: flex-start; min-height: 100vh; height: auto; }
+            #dashboard-content { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+            .sidebar { position: fixed; top: 0; left: -100%; width: 260px; height: 100vh; z-index: 1000; transition: left 0.3s ease; padding: 25px 15px; border-right: 1px solid var(--border); }
+            .sidebar.open { left: 0; } .sidebar .brand { display: none; }
+            .sidebar-overlay { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 995; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+            .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+            .top-navbar { flex-direction: column; align-items: stretch; padding: 15px; gap: 0; }
+            .mobile-brand-menu { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .mobile-brand-menu .brand { margin-bottom: 0; font-size: 18px; padding-left: 0; }
+            .mobile-menu-btn { background: none; border: none; color: white; padding: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+            .top-right-actions { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); gap: 10px; }
+            .user-profile-top { gap: 10px; } .user-name { font-size: 12px; } .user-id-logout { font-size: 10px; } .user-avatar { width: 34px; height: 34px; }
+            .btn-invite { padding: 8px 12px; font-size: 11px; white-space: nowrap; }
+            .content-scroll { padding: 20px 15px; overflow-x: hidden; } .panel { padding: 20px; margin-bottom: 20px; }
+            input[type="text"], input[type="number"] { font-size: 13px; padding: 12px 14px; }
+            select { font-size: 14px !important; padding: 12px 14px !important; background-position: right 14px top 50%; margin-bottom: 25px !important; }
+            select option { font-size: 14px !important; }
+            textarea { font-size: 11.5px !important; padding: 16px 18px !important; }
+            textarea::placeholder { font-size: 11.5px; }
+            .view-header { flex-direction: column; align-items: flex-start; gap: 12px; } .view-title { font-size: 18px; }
+            .detail-row { flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 10px; } .detail-value { text-align: left; }
+            .actions { flex-direction: column; gap: 10px; } .actions button { width: 100%; margin: 0; }
+            .scripts-grid { grid-template-columns: 1fr; gap: 15px; } .script-card { padding: 15px; }
+            #ss-badges { flex-wrap: wrap; } .checkbox-container { width: 100%; justify-content: center; }
+            .btn-outline { width: 100%; } #btnSubmitScript, #btnSubmitPanel, .btn-primary { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="plan-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
+    <div class="glass-card fade-in" style="padding: 30px; border-radius: 16px; max-width: 400px; width: 90%; text-align: center; border: 1px solid var(--border);">
+        <h2 style="color: white; font-size: 22px; margin-bottom: 10px; font-weight: 800;">Select Your Plan</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px; line-height: 1.5;">You are currently using the free tier. Would you like to continue with the free plan or acquire a premium plan to unlock all API limits?</p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <a href="https://discord.gg/rdBRAengEt" target="_blank" class="btn-primary" style="text-decoration: none; padding: 12px; font-size: 15px; width: 100%; box-sizing: border-box;" onclick="document.getElementById('plan-modal-overlay').style.display='none'">Acquire Premium Plan</a>
+            <button class="btn-outline" style="padding: 12px; font-size: 15px; width: 100%;" onclick="document.getElementById('plan-modal-overlay').style.display='none'">Continue Free</button>
+        </div>
+    </div>
+</div>
+
+<div id="apikey-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
+    <div class="glass-card fade-in" style="padding: 30px; border-radius: 16px; max-width: 400px; width: 90%; text-align: center; border: 1px solid var(--border);">
+        <h2 style="color: white; font-size: 22px; margin-bottom: 10px; font-weight: 800;">Redeem API Key</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px; line-height: 1.5;">Enter your purchased API Key to unlock premium access.</p>
+
+        <input type="text" id="customApiKeyInput" placeholder="Enter API Key here..." style="margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; text-align: center;">
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button id="btn-confirm-apikey" class="btn-primary" style="padding: 12px; font-size: 15px; width: 100%; justify-content: center;" onclick="confirmApiKey()">Confirm & Redeem</button>
+            <button class="btn-outline" style="padding: 12px; font-size: 15px; width: 100%; justify-content: center;" onclick="document.getElementById('apikey-modal-overlay').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="auth-wrapper">
+    <div class="code-background" aria-hidden="true">
+        <div class="code-column">
+            <div class="code-block">
+<span class="cm">-- [Luau Protect] Advanced Decryption Pipeline</span>
+<span class="kw">local</span> <span class="vr">Core</span> <span class="op">=</span> <span class="vr">game</span><span class="op">:</span><span class="fn">GetService</span>(<span class="st">"CoreGui"</span>)
+<span class="kw">local</span> <span class="vr">KeySystem</span> <span class="op">=</span> <span class="fn">require</span>(<span class="st">"modules/LicenseManager"</span>)
+<span class="kw">function</span> <span class="vr">ProtectScript</span>(<span class="vr">source</span>)
+    <span class="cm">-- 1. Custom Instruction Generation</span>
+    <span class="kw">local</span> <span class="vr">ast</span> <span class="op">=</span> <span class="fn">parse</span>(<span class="vr">source</span>)
+    <span class="cm">-- 2. Self-Decrypting Wrapper</span>
+    <span class="vr">ast</span> <span class="op">=</span> <span class="vr">VirtualMachine</span><span class="op">:</span><span class="fn">Wrap</span>(<span class="vr">ast</span>)
+    <span class="kw">return</span> <span class="vr">Compiler</span><span class="op">:</span><span class="fn">Build</span>(<span class="vr">ast</span>)
+<span class="kw">end</span>
+<span class="kw">function</span> <span class="vr">ValidateUserKey</span>(<span class="vr">key</span>, <span class="vr">hwid</span>)
+    <span class="kw">if not</span> <span class="vr">KeySystem</span><span class="op">.</span><span class="fn">CheckWhitelist</span>(<span class="vr">hwid</span>) <span class="kw">then</span>
+        <span class="vr">KeySystem</span><span class="op">.</span><span class="fn">IssueBan</span>(<span class="vr">hwid</span>, <span class="st">"Unauthorized Access"</span>)
+        <span class="kw">return</span> <span class="kw">false</span>
+    <span class="kw">end</span>
+    <span class="kw">return</span> <span class="kw">true</span>
+<span class="kw">end</span>
+<br><br></div>
+        </div>
+    </div>
+    <div class="vignette"></div>
+    <div id="auth-login" class="glass-card rounded-2xl p-6 sm:p-10 max-w-[420px] w-[90%] mx-auto relative z-10 fade-in text-center flex flex-col justify-center my-auto">
+        <div class="flex justify-center mb-5">
+            <div class="bg-gray-800/80 p-3.5 rounded-2xl border border-gray-600/30 shadow-[0_0_20px_rgba(88,101,242,0.15)]">
+                <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7v4m8-4v4"></path>
+                </svg>
+            </div>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white tracking-wide mb-1.5">Luau Protection</h1>
+        <p class="text-[13px] text-gray-400 mb-7">Authenticates your hardware and scripts.</p>
+        <div class="space-y-4">
+            <a href="/api/auth/discord" class="w-full bg-[#5865F2] hover:bg-[#4752C4] transition-all duration-300 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(88,101,242,0.3)] hover:shadow-[0_0_25px_rgba(88,101,242,0.5)] transform hover:-translate-y-0.5 text-sm">
+                <svg class="w-5 h-5 mr-3 fill-current" viewBox="0 0 127.14 96.36"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.1,46,96,53,91.08,65.69,84.69,65.69Z"/></svg>
+                Login with Discord
+            </a>
+        </div>
+        <div class="mt-7 flex flex-col space-y-3 text-center border-t border-gray-700/50 pt-5">
+            <button onclick="switchAuthView('auth-features')" class="text-[13px] text-gray-400 hover:text-white transition-colors bg-transparent border-none p-0 m-0 w-auto h-auto inline">What protections do we offer?</button>
+            <a href="/terms" class="text-[13px] text-gray-400 hover:text-white transition-colors bg-transparent p-0 m-0 w-auto h-auto inline">Terms of Service & Privacy</a>
+        </div>
+    </div>
+    <div id="auth-features" class="glass-card rounded-2xl p-5 sm:p-10 max-w-[480px] w-[92%] mx-auto relative z-10 hidden my-auto">
+        <h2 class="text-base sm:text-xl font-bold text-white mb-4 border-b border-gray-700/50 pb-3 text-left">Protection Systems</h2>
+        <div class="space-y-4 text-left">
+            <div>
+                <h3 class="text-[14px] sm:text-base font-semibold text-indigo-400 mb-1.5 flex items-center">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                    Self-Decrypting Architecture
+                </h3>
+                <p class="text-[11.5px] sm:text-[13px] text-gray-400 leading-relaxed">Instead of standard obfuscation, your script is converted into custom code that dynamically self-decrypts at runtime. It utilizes the script's own proprietary instructions for the decryption process.</p>
+            </div>
+            <div>
+                <h3 class="text-[14px] sm:text-base font-semibold text-[#5865F2] mb-1.5 flex items-center">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    Key & License Manager
+                </h3>
+                <p class="text-[11.5px] sm:text-[13px] text-gray-400 leading-relaxed">Monetize and control access to your scripts. Generate temporary or permanent keys tied to the user's Hardware ID (HWID).</p>
+            </div>
+        </div>
+        <div class="mt-6">
+            <button onclick="switchAuthView('auth-login')" class="w-full bg-gray-800 hover:bg-gray-700 text-white text-[12px] sm:text-[13px] font-medium py-2.5 px-4 rounded-xl transition-colors flex justify-center items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Return to Home
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="dashboard-content">
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+    <div class="sidebar">
+        <div class="brand">
+            <svg class="brand-icon flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            Luau<span>Protect</span>
+        </div>
+        <div class="nav-items-container">
+            <div class="nav-accordion open" onclick="toggleAccordion('dropdown-scripts', this)">
+                <div class="nav-accordion-content"><svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg><span>Scripts</span></div>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="nav-dropdown open" id="dropdown-scripts">
+                <div class="nav-sub-item action-add" onclick="switchView('view-create-script', this)">
+                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Upload New Script
+                </div>
+                <div id="sidebar-scripts-list"></div>
+            </div>
+            <div class="nav-accordion" onclick="toggleAccordion('dropdown-panels', this)">
+                <div class="nav-accordion-content"><svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg><span>Panels</span></div>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="nav-dropdown" id="dropdown-panels">
+                <div class="nav-sub-item action-add" onclick="switchView('view-create-panel', this)">
+                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Create New Panel
+                </div>
+                <div id="sidebar-panels-list"></div>
+            </div>
+            <div class="nav-accordion" onclick="toggleAccordion('dropdown-keys', this)">
+                <div class="nav-accordion-content"><svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg><span>Keys</span></div>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="nav-dropdown" id="dropdown-keys">
+                <div class="nav-sub-item action-add" onclick="switchView('view-generate-key', this)">
+                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Generate / Manage
+                </div>
+                <div id="sidebar-keys-list"></div>
+            </div>
+            <div class="nav-single" onclick="switchView('view-hwids', this, true)">
+                <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                HWID Bans
+            </div>
+
+            <div id="sidebar-api-section" style="margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border); padding-left: 5px; padding-right: 5px; margin-bottom: 5px;"></div>
+
+            <a href="/terms" target="_blank" class="nav-single flex items-center gap-[10px]" style="margin-top: 0;">
+                <svg class="icon-md flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Terms & Privacy
+            </a>
+        </div>
+    </div>
+    <div class="main-content-wrapper">
+        <div class="top-navbar">
+            <div class="mobile-brand-menu">
+                <div class="brand">
+                    <svg class="brand-icon flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    Luau<span>Protect</span>
+                </div>
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+            </div>
+            <div class="top-right-actions">
+                <a href="https://discord.com/oauth2/authorize?client_id=1517514347142840321&permissions=8&integration_type=0&scope=bot" target="_blank" class="btn-invite">
+                    <svg class="icon-sm flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Invite Bot
+                </a>
+                <div class="user-profile-top">
+                    <div class="user-info-top">
+                        <span class="user-name" id="displayUsername">Loading...</span>
+                        <div class="user-id-logout">
+                            <span class="user-id" id="displayUserId">ID: ---</span>
+                            <span style="color: var(--border);">|</span>
+                            <span class="logout-link" onclick="logout()">Log out</span>
+                        </div>
+                    </div>
+                    <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+                </div>
+            </div>
+        </div>
+        <div class="content-scroll">
+            <div class="content-container">
+
+                <div id="view-create-script" class="view-section active">
+                    <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 15px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <div style="display: flex; gap: 25px; flex-wrap: wrap;">
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="color: var(--text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Remaining Protections</span>
+                                <span style="color: var(--primary); font-size: 18px; font-weight: 800; font-family: 'JetBrains Mono', monospace;" id="displayObfLeft">Loading...</span>
+                            </div>
+                        </div>
+                        <button id="btn-upgrade-plan" class="btn-primary" style="font-size: 12px; padding: 8px 15px;" onclick="document.getElementById('plan-modal-overlay').style.display='flex'">Upgrade Plan</button>
+                    </div>
+
+                    <div class="panel">
+                        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+                            <h2 id="scriptFormTitle" style="margin:0;">Upload / Edit Script</h2>
+                            <div style="display:flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; max-width: max-content;">
+                                <label class="checkbox-container" style="border-color: rgba(245, 158, 11, 0.4); color: #fcd34d;">
+                                    <input type="checkbox" id="ffaModeCheck" style="accent-color: #f59e0b;">
+                                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                                    FFA Mode
+                                </label>
+                                <label class="checkbox-container" style="border-color: rgba(139, 92, 246, 0.4); color: #c4b5fd;">
+                                    <input type="checkbox" id="compressModeCheck" style="accent-color: #8b5cf6;">
+                                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                    Compress Mode
+                                </label>
+                                <input type="file" id="scriptFileInput" accept=".lua, .txt" style="display: none;" onchange="handleFileUpload(event)">
+                                <button class="btn-outline" style="padding: 10px 14px;" onclick="document.getElementById('scriptFileInput').click()">
+                                    <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                    Upload File
+                                </button>
+                            </div>
+                        </div>
+                        <input type="text" id="scriptName" placeholder="Script Name (e.g. Universal Hub)">
+                        <textarea id="scriptCode" rows="12" placeholder="-- Paste your script here..."></textarea>
+
+                        <div style="display:flex; flex-direction: column; gap:10px; margin-top: 10px;">
+                            <button id="btnSubmitScript" class="btn-primary" onclick="submitScript()">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                                Host Script
+                            </button>
+                            <button id="btnCancelEdit" class="btn-outline" style="display:none;" onclick="cancelEdit()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-single-script" class="view-section">
+                    <div class="panel">
+                        <div class="view-header">
+                            <div><h2 class="view-title" id="ss-title">Script Name</h2><div class="view-subtitle" id="ss-id">ID: ---</div></div>
+                            <div id="ss-badges" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                        </div>
+                        <div class="detail-row" style="background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 25px; flex-direction: column; align-items: flex-start;">
+                            <span class="detail-label w-full" style="margin-bottom: 10px;">Loadstring (Click to copy)</span>
+                            <input type="text" id="ss-loadstring" class="loader-input" style="margin:0; width: 100%; font-size:12px;" readonly onclick="copyLoadstring(this)">
+                        </div>
+                        <div class="actions" id="ss-actions"></div>
+                    </div>
+                </div>
+                <div id="view-create-panel" class="view-section">
+                    <div class="panel">
+                        <h2 id="panelFormTitle">Create Discord Panel</h2>
+                        <input type="text" id="panelName" placeholder="Panel Title (e.g. Premium Hub Panel)">
+                        <textarea id="panelDescription" rows="4" placeholder="Panel Description / Bot Message"></textarea>
+                        <input type="text" id="panelChannelId" placeholder="Discord Channel ID (where the bot will send it)">
+                        <select id="panelScriptId"><option value="">Select Script</option></select>
+                        <input type="number" id="panelHwidCooldown" placeholder="HWID Reset Cooldown (in seconds, e.g. 180)">
+                        <div style="display:flex; flex-direction: column; gap:10px; margin-top: 10px;">
+                            <button id="btnSubmitPanel" class="btn-primary" onclick="submitPanel()">Create Panel</button>
+                            <button id="btnCancelPanelEdit" class="btn-outline" style="display:none;" onclick="cancelPanelEdit()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-single-panel" class="view-section">
+                    <div class="panel">
+                        <div class="view-header">
+                            <div><h2 class="view-title" id="sp-title">Panel Name</h2><div class="view-subtitle" id="sp-id">Panel ID: ---</div></div>
+                            <button class="btn-success w-full sm:w-auto" id="sp-send-btn">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                Send to Discord
+                            </button>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 5px; margin-bottom: 25px;">
+                            <div class="detail-row"><span class="detail-label">Discord Channel ID</span><span class="detail-value" id="sp-channel"></span></div>
+                            <div class="detail-row"><span class="detail-label">Target Script</span><span class="detail-value" id="sp-script"></span></div>
+                            <div class="detail-row"><span class="detail-label">HWID Cooldown</span><span class="detail-value" id="sp-cd"></span></div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn-outline" id="sp-edit-btn">Edit Panel Details</button>
+                            <button class="btn-danger" id="sp-delete-btn">Delete Panel</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-generate-key" class="view-section">
+                    <div class="panel">
+                        <h2>Generate New Panel Key</h2>
+                        <select id="keygenPanelId">
+                            <option value="">Select Panel</option>
+                        </select>
+                        <select id="keygenDuration">
+                            <option value="1h">1 Hour</option>
+                            <option value="1d">1 Day</option>
+                            <option value="1w">1 Week</option>
+                            <option value="1m">1 Month</option>
+                            <option value="1y">1 Year</option>
+                            <option value="permanent">Permanent</option>
+                        </select>
+                        <input type="text" id="keygenNote" placeholder="Key Note (e.g. Buyer's Name)">
+                        <button id="btnGenerateKey" class="btn-primary" onclick="generateKey()">
+                            <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                            Generate Key
+                        </button>
+                    </div>
+                </div>
+                <div id="view-keys-list" class="view-section">
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 25px;">
+                        <h2 id="keys-view-title" style="margin: 0; display:flex; align-items:center; gap:8px;">
+                            <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2h-6l-2-2H5a2 2 0 00-2 2h-6l-2-2H5a2 2 0 00-2 2h-6l-2-2H5a2 2 0 00-2 2h-6l-2-2H5a2 2 0 00-2 2h-6l-2-2H5a2 2 0 00-2 2h-6l-2-2H5a2 2 0 00-2 2h-6l-2-2H5a2 2 0 00-2 2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                            Panel Keys
+                        </h2>
+                        <span id="keys-view-count" style="color: var(--text-muted); font-size: 13px; font-weight:600;">0 Keys</span>
+                    </div>
+                    <div id="keysGrid" class="scripts-grid"></div>
+                </div>
+                <div id="view-hwids" class="view-section">
+                    <div class="panel">
+                        <h2>Ban HWID</h2>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <input type="text" id="banHwidInput" placeholder="Enter exact HWID string to ban" style="margin-bottom:0;">
+                            <button class="btn-danger" onclick="banHwid()">Ban HWID</button>
+                        </div>
+                    </div>
+                    <h2>Banned HWIDs Database</h2>
+                    <div id="hwidList" class="scripts-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchAuthView(targetId) {
+        const sections = ['auth-login', 'auth-features'];
+        sections.forEach(id => { const el = document.getElementById(id); el.classList.add('hidden'); el.classList.remove('flex', 'fade-in'); });
+        const targetEl = document.getElementById(targetId);
+        targetEl.classList.remove('hidden'); targetEl.classList.add('flex');
+        void targetEl.offsetWidth; targetEl.classList.add('fade-in');
+    }
+
+    let currentScripts = [], currentPanels = [], currentKeys = [], currentHwids = [];
+    let serverTime = Date.now(), editingScriptId = null, editingPanelId = null;
+    let activeScriptId = null, activePanelId = null, activeKeysPanelId = null;
+
+    function toggleSidebar() { document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.sidebar-overlay').classList.toggle('open'); }
+    function closeSidebar() { document.querySelector('.sidebar').classList.remove('open'); document.querySelector('.sidebar-overlay').classList.remove('open'); }
+
+    function toggleAccordion(dropdownId, element) {
+        const dropdown = document.getElementById(dropdownId); const isOpen = dropdown.classList.contains('open');
+        if(isOpen) { dropdown.classList.remove('open'); element.classList.remove('open'); } else { dropdown.classList.add('open'); element.classList.add('open'); }
+    }
+
+    function switchView(viewId, sidebarItem, isSingleNav = false) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        if(sidebarItem) {
+            document.querySelectorAll('.nav-sub-item, .nav-single').forEach(el => el.classList.remove('active'));
+            sidebarItem.classList.add('active');
+            if(!isSingleNav) { document.querySelectorAll('.nav-accordion').forEach(el => el.classList.remove('active')); const parentDropdown = sidebarItem.closest('.nav-dropdown'); if(parentDropdown) { parentDropdown.previousElementSibling.classList.add('active'); } }
+            else { document.querySelectorAll('.nav-accordion').forEach(el => el.classList.remove('active')); }
+        }
+        document.getElementById(viewId).classList.add('active'); closeSidebar();
+        document.querySelector('.content-scroll').scrollTop = 0;
+    }
+
+    function getHeaders() {
+        return { 'Content-Type': 'application/json', 'X-User-Id': localStorage.getItem('lp_id') };
+    }
+
+    function checkLogin() {
+        const urlParams = new URLSearchParams(window.location.search || window.location.hash.replace('#', '?'));
+        let user = urlParams.get('user'), id = urlParams.get('id'), avatar = urlParams.get('avatar');
+        if (user && id) { localStorage.setItem('lp_user', user); localStorage.setItem('lp_id', id); localStorage.setItem('lp_avatar', avatar || ''); window.history.replaceState({}, document.title, "/"); }
+        else { user = localStorage.getItem('lp_user'); id = localStorage.getItem('lp_id'); avatar = localStorage.getItem('lp_avatar'); }
+        if (user && id) {
+            document.getElementById('auth-wrapper').style.display = 'none'; document.getElementById('dashboard-content').style.display = 'flex';
+            document.getElementById('displayUsername').innerText = user; document.getElementById('displayUserId').innerText = `ID: ${id}`;
+            document.getElementById('userAvatar').src = (avatar && avatar !== 'null') ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` : `https://cdn.discordapp.com/embed/avatars/0.png`;
+
+            // Pass true to indicate initial load to trigger the modal conditionally
+            loadDashboardData(true);
+        } else { document.getElementById('auth-wrapper').style.display = 'flex'; document.getElementById('dashboard-content').style.display = 'none'; }
+    }
+
+    function logout() { localStorage.clear(); window.location.href = '/api/auth/logout'; }
+
+    async function loadDashboardData(isInitialLoad = false) {
+        try {
+            const res = await fetch('/api/data', { headers: getHeaders() });
+            const data = await res.json();
+            if(data.error) return logout();
+            currentScripts = data.scripts || []; currentPanels = data.panels || []; currentKeys = data.keys || []; currentHwids = data.bannedHWIDs || []; serverTime = data.serverTime || Date.now();
+            buildSidebar(); updateSelects(); renderHwids(currentHwids);
+
+            if (data.obfuscationsLeft !== undefined) {
+                const maxObf = data.maxObfuscations || '∞';
+                document.getElementById('displayObfLeft').innerText = `${data.obfuscationsLeft} / ${maxObf}`;
+            }
+
+            const apiSection = document.getElementById('sidebar-api-section');
+            const userPlan = data.plan ? data.plan.toLowerCase() : 'basic';
+
+            // Hide upgrade button if already pro/premium
+            if (userPlan === 'pro' || userPlan === 'premium') {
+                document.getElementById('btn-upgrade-plan').style.display = 'none';
+            } else {
+                document.getElementById('btn-upgrade-plan').style.display = 'inline-flex';
+            }
+
+            // Trigger modal on first load if on free/basic plan
+            if (isInitialLoad && userPlan !== 'pro' && userPlan !== 'premium') {
+                document.getElementById('plan-modal-overlay').style.display = 'flex';
+            } else if (isInitialLoad) {
+                document.getElementById('plan-modal-overlay').style.display = 'none';
+            }
+
+            let planColor = "var(--text-muted)"; let planBorder = "var(--border)";
+            if (userPlan === 'pro') { planColor = "var(--primary)"; planBorder = "var(--primary)"; }
+            if (userPlan === 'premium') { planColor = "var(--warning)"; planBorder = "var(--warning)"; }
+
+            const planBadge = `<span style="background: rgba(0,0,0,0.4); color: ${planColor}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid ${planBorder}; letter-spacing: 0.5px;">${userPlan}</span>`;
+
+            if (data.apiKey) {
+                let expiryText = "Lifetime";
+                let colorText = "var(--warning)";
+                if (data.apiKeyExpiry) {
+                    const timeDiff = data.apiKeyExpiry - serverTime;
+                    if (timeDiff > 0) {
+                        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        expiryText = `${days}d ${hours}h left`;
+                    } else {
+                        expiryText = "Expired";
+                        colorText = "var(--danger)";
+                    }
+                } else if (data.apiTimeLeft) {
+                    expiryText = data.apiTimeLeft;
+                }
+
+                apiSection.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">API Key</div>
+                        ${planBadge}
+                    </div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--success); word-break: break-all; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; border: 1px dashed rgba(16, 185, 129, 0.4); text-align: center; margin-bottom: 10px;">${data.apiKey}</div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 15px; padding: 0 5px;">
+                        <span style="color: var(--text-muted);">Time Left:</span>
+                        <span style="color: ${colorText}; font-weight: 600;">${expiryText}</span>
+                    </div>
+
+                    <button class="btn-danger" style="width: 100%; font-size: 12px; padding: 8px; justify-content: center; background-color: rgba(239, 68, 68, 0.15);" onclick="removeApiKey()">
+                        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Remove API Key
+                    </button>
+                `;
+            } else {
+                apiSection.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">API Status</div>
+                        ${planBadge}
+                    </div>
+                    <button class="btn-primary" style="width: 100%; font-size: 12px; padding: 10px; background-color: var(--primary); justify-content: center;" onclick="redeemApiKey()">
+                        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 5px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                        Redeem Key
+                    </button>
+                `;
+            }
+        } catch(e) { console.log(e); }
+    }
+
+    function redeemApiKey() {
+        document.getElementById('customApiKeyInput').value = '';
+        document.getElementById('apikey-modal-overlay').style.display = 'flex';
+    }
+
+    async function confirmApiKey() {
+        const keyInput = document.getElementById('customApiKeyInput').value.trim();
+        if (!keyInput) return alert("Please enter a valid API Key.");
+
+        const btn = document.getElementById('btn-confirm-apikey');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "Redeeming..."; btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/claim-key', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ key: keyInput })
+            });
+            const data = await res.json();
+
+            if(data.success || data.apiKey) {
+                alert("API Key redeemed successfully!");
+                document.getElementById('apikey-modal-overlay').style.display = 'none';
+                loadDashboardData();
+            } else {
+                alert(data.error || "Invalid API Key or you already redeemed one.");
+            }
+        } catch(e) { console.error(e); alert("Error trying to redeem API key.");
+        } finally { btn.innerHTML = originalText; btn.disabled = false; }
+    }
+
+    async function removeApiKey() {
+        if (!confirm("Are you sure you want to remove your API Key? This will downgrade your current plan limits.")) return;
+        if (!confirm("Are you ABSOLUTELY sure? This action cannot be undone and you will have to enter a new key to get premium limits back.")) return;
+
+        try {
+            const res = await fetch('/api/remove-key', { method: 'POST', headers: getHeaders() });
+            const data = await res.json();
+            if (data.success) {
+                alert("API Key removed successfully!");
+                loadDashboardData();
+            } else {
+                alert(data.error || "Failed to remove API Key.");
+            }
+        } catch(e) { console.error(e); alert("Error trying to remove API key."); }
+    }
+
+    function updateSelects() {
+        const scriptSelect = document.getElementById('panelScriptId');
+        scriptSelect.innerHTML = '<option value="">Select Script</option>';
+        currentScripts.forEach(s => scriptSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+
+        const keygenPanelSelect = document.getElementById('keygenPanelId');
+        keygenPanelSelect.innerHTML = '<option value="">Select Panel</option>';
+        currentPanels.forEach(p => keygenPanelSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+    }
+
+    function buildSidebar() {
+        const fileIcon = `<svg class="icon-sm flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>`;
+        const settingsIcon = `<svg class="icon-sm flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`;
+        const keyIcon = `<svg class="icon-sm flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>`;
+        const slist = document.getElementById('sidebar-scripts-list'); slist.innerHTML = '';
+        currentScripts.forEach(s => { const div = document.createElement('div'); div.className = 'nav-sub-item' + (activeScriptId === s.id ? ' active' : ''); div.innerHTML = `${fileIcon} ${s.name}`; div.onclick = function() { openSingleScriptView(s.id, this); }; slist.appendChild(div); });
+        const plist = document.getElementById('sidebar-panels-list'); plist.innerHTML = '';
+        currentPanels.forEach(p => { const div = document.createElement('div'); div.className = 'nav-sub-item' + (activePanelId === p.id ? ' active' : ''); div.innerHTML = `${settingsIcon} ${p.name}`; div.onclick = function() { openSinglePanelView(p.id, this); }; plist.appendChild(div); });
+        const klist = document.getElementById('sidebar-keys-list'); klist.innerHTML = '';
+        currentPanels.forEach(p => { const div = document.createElement('div'); div.className = 'nav-sub-item' + (activeKeysPanelId === p.id ? ' active' : ''); div.innerHTML = `${keyIcon} ${p.name}`; div.onclick = function() { openKeysView(p.id, p.name, this); }; klist.appendChild(div); });
+    }
+
+    function copyLoadstring(el) {
+        if(typeof el === 'string') {
+            navigator.clipboard.writeText(el).then(() => alert("Copied to clipboard!"));
+        } else {
+            el.select(); el.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(el.value).then(() => alert("Copied to clipboard!"));
+        }
+    }
+
+    function openSingleScriptView(id, sidebarEl) {
+        const s = currentScripts.find(x => x.id === id); if(!s) return;
+        activeScriptId = id; activePanelId = null; activeKeysPanelId = null;
+        document.getElementById('ss-title').innerText = s.name; document.getElementById('ss-id').innerText = `ID: ${s.id}`;
+        document.getElementById('ss-loadstring').value = `loadstring(game:HttpGet('${window.location.origin}/loader/${s.id}'))()`;
+
+        const badgesContainer = document.getElementById('ss-badges'); const isActive = s.status !== 'disabled';
+        let badgesHtml = isActive ? `<div class="status-badge btn-success">Active</div>` : `<div class="status-badge btn-danger">Disabled</div>`;
+        if(s.ffaMode) badgesHtml += `<div class="status-badge btn-warning">FFA MODE</div>`;
+        if(s.compressMode) badgesHtml += `<div class="status-badge" style="background-color:rgba(139, 92, 246, 0.1); color:#c4b5fd; border: 1px solid rgba(139, 92, 246, 0.2);">COMPRESSED</div>`;
+        badgesContainer.innerHTML = badgesHtml;
+
+        const toggleBtnClass = isActive ? 'btn-warning' : 'btn-success'; const toggleBtnText = isActive ? 'Disable Script' : 'Enable Script';
+        const ffaBtnClass = s.ffaMode ? 'btn-warning' : 'btn-outline'; const ffaBtnText = s.ffaMode ? 'Disable FFA Mode' : 'Enable FFA Mode';
+        const actions = document.getElementById('ss-actions');
+
+        actions.innerHTML = `
+            <button class="${toggleBtnClass}" onclick="toggleScript('${s.id}')">${toggleBtnText}</button>
+            <button class="${ffaBtnClass}" onclick="toggleFfa('${s.id}')">${ffaBtnText}</button>
+            <button class="btn-outline" onclick="editScript('${s.id}')">Edit Settings / Code</button>
+            <button class="btn-danger" onclick="deleteScript('${s.id}')">Delete Script</button>
+        `;
+        switchView('view-single-script', sidebarEl);
+    }
+
+    function openSinglePanelView(id, sidebarEl) {
+        const p = currentPanels.find(x => x.id === id); if(!p) return;
+        activeScriptId = null; activePanelId = id; activeKeysPanelId = null;
+        const targetScript = currentScripts.find(s => s.id === p.scriptId);
+        document.getElementById('sp-title').innerText = p.name; document.getElementById('sp-id').innerText = `Panel ID: ${p.id}`;
+        document.getElementById('sp-channel').innerText = p.channelId; document.getElementById('sp-script').innerText = targetScript ? targetScript.name : 'Target Script Not Found';
+        document.getElementById('sp-cd').innerText = `${p.hwidCooldown} seconds`;
+        document.getElementById('sp-send-btn').onclick = () => sendPanel(p.id);
+        document.getElementById('sp-edit-btn').onclick = () => editPanel(p.id);
+        document.getElementById('sp-delete-btn').onclick = () => deletePanel(p.id);
+        switchView('view-single-panel', sidebarEl);
+    }
+
+    function openKeysView(panelId, panelName, sidebarEl) {
+        activeScriptId = null; activePanelId = null; activeKeysPanelId = panelId;
+        let keysToShow = currentKeys.filter(k => k.panelId === panelId);
+
+        document.getElementById('keys-view-title').innerHTML = `
+            <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            Keys for ${panelName}
+        `;
+        document.getElementById('keys-view-count').innerText = `${keysToShow.length} Created Keys`;
+
+        const grid = document.getElementById('keysGrid');
+        grid.innerHTML = '';
+
+        if(keysToShow.length === 0) {
+            grid.innerHTML = `<div style="color: var(--text-muted); grid-column: 1 / -1; text-align: center; padding: 20px;">There are no keys generated for this panel.</div>`;
+        } else {
+            keysToShow.forEach(k => {
+                grid.innerHTML += `
+                <div class="script-card" style="padding: 15px;">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--success); word-break: break-all; margin-bottom: 8px;">${k.key}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Note: ${k.note || 'N/A'}</div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Expires: ${k.expiresAt ? new Date(k.expiresAt).toLocaleString() : 'Permanent'}</div>
+                    <div class="actions">
+                        <button class="btn-outline" onclick="copyLoadstring('${k.key}')">Copy</button>
+                        <button class="btn-danger" onclick="deleteKey('${k.id || k.key}')">Delete</button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        if (sidebarEl) {
+            switchView('view-keys-list', sidebarEl);
+        } else {
+            switchView('view-keys-list', null, true);
+            document.querySelectorAll('.nav-sub-item').forEach(el => el.classList.remove('active'));
+            const sideItems = document.getElementById('sidebar-keys-list').children;
+            for(let i=0; i<sideItems.length; i++) {
+                if(sideItems[i].innerText.includes(panelName)) {
+                    sideItems[i].classList.add('active');
+                }
+            }
+        }
+    }
+
+    async function generateKey() {
+        const panelId = document.getElementById('keygenPanelId').value;
+        const duration = document.getElementById('keygenDuration').value;
+        const note = document.getElementById('keygenNote').value;
+
+        if (!panelId) return alert("Please select a panel.");
+
+        const btn = document.getElementById('btnGenerateKey');
+        const origText = btn.innerHTML;
+        btn.innerHTML = "Generating..."; btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/generate-key', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ panelId, duration, note })
+            });
+            const data = await res.json();
+
+            if (data.success || data.key) {
+                alert("Key generated successfully!");
+                await loadDashboardData();
+                const p = currentPanels.find(x => x.id === panelId);
+                if (p) openKeysView(p.id, p.name, null);
+                document.getElementById('keygenNote').value = '';
+            } else {
+                alert(data.error || "Error generating key.");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Connection error while generating key.");
+        } finally {
+            btn.innerHTML = origText; btn.disabled = false;
+        }
+    }
+
+    async function deleteKey(keyId) {
+        if (!confirm("Are you sure you want to permanently delete this key?")) return;
+        try {
+            const res = await fetch(`/api/delete-key/${keyId}`, { method: 'DELETE', headers: getHeaders() });
+            const data = await res.json();
+            if(data.success) {
+                loadDashboardData().then(() => {
+                    if(activeKeysPanelId) {
+                        const p = currentPanels.find(x => x.id === activeKeysPanelId);
+                        if(p) openKeysView(p.id, p.name, null);
+                    }
+                });
+            } else {
+                alert(data.error || "Error deleting key.");
+            }
+        } catch(e) { console.error(e); alert("Connection error while trying to delete key."); }
+    }
+
+    function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            document.getElementById('scriptCode').value = evt.target.result;
+            if(!document.getElementById('scriptName').value) {
+                document.getElementById('scriptName').value = file.name.replace(/\.[^/.]+$/, "");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    async function submitScript() {
+        const name = document.getElementById('scriptName').value;
+        const code = document.getElementById('scriptCode').value;
+        const compressMode = document.getElementById('compressModeCheck').checked;
+        const ffaMode = document.getElementById('ffaModeCheck').checked;
+
+        if (!name || !code) return alert('Please enter a name and paste your script code.');
+
+        const btn = document.getElementById('btnSubmitScript');
+        const origText = btn.innerHTML;
+        btn.innerHTML = "Processing..."; btn.disabled = true;
+
+        const url = editingScriptId ? '/api/update-script' : '/api/create-script';
+        const payload = { name, code, compressMode, ffaMode };
+        if (editingScriptId) payload.id = editingScriptId;
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                cancelEdit();
+                switchView('view-create-script', document.querySelector('.action-add'));
+                loadDashboardData(); // Call without await for instantaneous UI
+            } else {
+                alert(data.error || "Error processing script.");
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Server connection error.');
+        } finally {
+            btn.innerHTML = origText; btn.disabled = false;
+        }
+    }
+
+    function cancelEdit() {
+        editingScriptId = null;
+        document.getElementById('scriptName').value = '';
+        document.getElementById('scriptCode').value = '';
+        document.getElementById('compressModeCheck').checked = false;
+        document.getElementById('ffaModeCheck').checked = false;
+        document.getElementById('scriptFormTitle').innerText = 'Upload / Edit Script';
+        document.getElementById('btnSubmitScript').innerHTML = `<svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg> Host Script`;
+        document.getElementById('btnCancelEdit').style.display = 'none';
+        document.getElementById('scriptFileInput').value = '';
+    }
+
+    async function toggleScript(id) {
+        try {
+            const res = await fetch(`/api/toggle-script/${id}`, { method: 'POST', headers: getHeaders() });
+            const data = await res.json();
+            if(data.success) {
+                await loadDashboardData();
+                openSingleScriptView(id, null);
+            } else {
+                alert(data.error || "Failed to change script status.");
+            }
+        } catch(e) { console.error(e); alert("Connection error."); }
+    }
+
+    async function toggleFfa(id) {
+        try {
+            const res = await fetch(`/api/toggle-ffa/${id}`, { method: 'POST', headers: getHeaders() });
+            const data = await res.json();
+            if(data.success) {
+                await loadDashboardData();
+                openSingleScriptView(id, null);
+            } else {
+                alert(data.error || "Failed to change FFA Mode status.");
+            }
+        } catch(e) { console.error(e); alert("Connection error."); }
+    }
+
+    function editScript(id) {
+        const s = currentScripts.find(x => x.id === id);
+        if(!s) return;
+        editingScriptId = id;
+        document.getElementById('scriptName').value = s.name;
+        document.getElementById('scriptCode').value = s.code || s.rawCode;
+        document.getElementById('compressModeCheck').checked = s.compressMode || false;
+        document.getElementById('ffaModeCheck').checked = s.ffaMode || false;
+        document.getElementById('scriptFormTitle').innerText = `Editing Script: ${s.name}`;
+        document.getElementById('btnSubmitScript').innerHTML = `Save Changes`;
+        document.getElementById('btnCancelEdit').style.display = 'inline-flex';
+        switchView('view-create-script', null);
+    }
+
+    async function deleteScript(id) {
+        if(!confirm("Are you 100% sure you want to delete this script? This action cannot be undone.")) return;
+
+        const btn = document.querySelector('#ss-actions .btn-danger');
+        if (btn) { btn.innerHTML = "Deleting..."; btn.disabled = true; }
+
+        try {
+            const res = await fetch(`/api/delete-script/${id}`, { method: 'DELETE', headers: getHeaders() });
+            const data = await res.json();
+            if(data.success) {
+                // Instantly remove active class and jump to "create script" screen
+                document.getElementById('view-single-script').classList.remove('active');
+                switchView('view-create-script', document.querySelector('.action-add'));
+
+                // Fetch data silently in background
+                loadDashboardData();
+            } else {
+                alert(data.error || "Error deleting script.");
+                if (btn) { btn.innerHTML = "Delete Script"; btn.disabled = false; }
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Connection error.");
+            if (btn) { btn.innerHTML = "Delete Script"; btn.disabled = false; }
+        }
+    }
+
+    async function submitPanel() {
+        const name = document.getElementById('panelName').value;
+        const description = document.getElementById('panelDescription').value;
+        const channelId = document.getElementById('panelChannelId').value;
+        const scriptId = document.getElementById('panelScriptId').value;
+        const hwidCooldown = document.getElementById('panelHwidCooldown').value;
+
+        if (!name || !channelId || !scriptId) return alert("Please fill in all required fields for the panel.");
+
+        const btn = document.getElementById('btnSubmitPanel');
+        const origText = btn.innerHTML;
+        btn.innerHTML = "Saving..."; btn.disabled = true;
+
+        const url = editingPanelId ? '/api/update-panel' : '/api/create-panel';
+        const payload = { name, description, channelId, scriptId, hwidCooldown: Number(hwidCooldown) || 0 };
+        if (editingPanelId) payload.id = editingPanelId;
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                cancelPanelEdit();
+                switchView('view-create-panel', document.querySelector('.action-add'));
+                loadDashboardData(); // Background call for instant UI
+            } else {
+                alert(data.error || "Error saving panel.");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Network error.");
+        } finally {
+            btn.innerHTML = origText; btn.disabled = false;
+        }
+    }
+
+    function cancelPanelEdit() {
+        editingPanelId = null;
+        document.getElementById('panelName').value = '';
+        document.getElementById('panelDescription').value = '';
+        document.getElementById('panelChannelId').value = '';
+        document.getElementById('panelScriptId').value = '';
+        document.getElementById('panelHwidCooldown').value = '';
+        document.getElementById('panelFormTitle').innerText = 'Create Discord Panel';
+        document.getElementById('btnSubmitPanel').innerHTML = `Create Panel`;
+        document.getElementById('btnCancelPanelEdit').style.display = 'none';
+    }
+
+    async function sendPanel(id) {
+        if(!confirm("Send panel message to configured Discord channel?")) return;
+        const btn = document.getElementById('sp-send-btn');
+        const origText = btn.innerHTML;
+        btn.innerHTML = "Sending..."; btn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/send-panel/${id}`, { method: 'POST', headers: getHeaders() });
+            const data = await res.json();
+            if(data.success) alert("Panel sent successfully to Discord!");
+            else alert(data.error || "Error sending panel.");
+        } catch(e) { console.error(e); alert("Connection error."); }
+        finally { btn.innerHTML = origText; btn.disabled = false; }
+    }
+
+    function editPanel(id) {
+        const p = currentPanels.find(x => x.id === id);
+        if(!p) return;
+        editingPanelId = id;
+        document.getElementById('panelName').value = p.name;
+        document.getElementById('panelDescription').value = p.description || '';
+        document.getElementById('panelChannelId').value = p.channelId;
+        document.getElementById('panelScriptId').value = p.scriptId;
+        document.getElementById('panelHwidCooldown').value = p.hwidCooldown || '';
+
+        document.getElementById('panelFormTitle').innerText = `Editing Panel: ${p.name}`;
+        document.getElementById('btnSubmitPanel').innerText = 'Save Changes';
+        document.getElementById('btnCancelPanelEdit').style.display = 'inline-flex';
+        switchView('view-create-panel', null);
+    }
+
+    async function deletePanel(id) {
+        if(!confirm("Are you sure you want to delete this panel? Settings will be lost.")) return;
+
+        const btn = document.getElementById('sp-delete-btn');
+        if (btn) { btn.innerHTML = "Deleting..."; btn.disabled = true; }
+
+        try {
+            const res = await fetch(`/api/delete-panel/${id}`, { method: 'DELETE', headers: getHeaders() });
+            const data = await res.json();
+            if(data.success) {
+                document.getElementById('view-single-panel').classList.remove('active');
+                switchView('view-create-panel', document.querySelector('.action-add'));
+                loadDashboardData();
+            } else {
+                alert(data.error || "Error deleting panel.");
+                if (btn) { btn.innerHTML = "Delete Panel"; btn.disabled = false; }
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Connection error.");
+            if (btn) { btn.innerHTML = "Delete Panel"; btn.disabled = false; }
+        }
+    }
+
+    async function banHwid() {
+        const hwid = document.getElementById('banHwidInput').value.trim();
+        if(!hwid) return alert("Enter a valid HWID.");
+        try {
+            const res = await fetch('/api/ban-hwid', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ hwid })
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert("HWID permanently banned from the system.");
+                document.getElementById('banHwidInput').value = '';
+                loadDashboardData();
+            } else {
+                alert(data.error || "Error banning HWID.");
+            }
+        } catch(e) { console.error(e); alert("Connection error."); }
+    }
+
+    function renderHwids(arr) {
+        const container = document.getElementById('hwidList');
+        container.innerHTML = '';
+        if(!arr || arr.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-muted);">There are no banned HWIDs in your list.</div>';
+            return;
+        }
+        arr.forEach(h => {
+            const hwidVal = typeof h === 'string' ? h : (h.hwid || h.id);
+            container.innerHTML += `
+                <div class="script-card" style="padding: 15px;">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--danger); word-break: break-all; margin-bottom: 10px;">${hwidVal}</div>
+                    <button class="btn-outline" style="width:100%; font-size:11px;" onclick="unbanHwid('${hwidVal}')">Unban HWID</button>
+                </div>
+            `;
+        });
+    }
+
+    async function unbanHwid(hwid) {
+        if(!confirm(`Are you sure you want to unban HWID:\n${hwid}?`)) return;
+        try {
+            const res = await fetch(`/api/unban-hwid/${hwid}`, { method: 'DELETE', headers: getHeaders() });
+            const data = await res.json();
+            if(data.success) {
+                loadDashboardData();
+            } else {
+                alert(data.error || "Error unbanning.");
+            }
+        } catch(e) { console.error(e); alert("Connection error."); }
+    }
+
+    // Init
+    window.onload = checkLogin;
+</script>
+</body>
+</html>
+
